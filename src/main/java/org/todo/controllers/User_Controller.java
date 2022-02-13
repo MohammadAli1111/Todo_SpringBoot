@@ -2,11 +2,15 @@ package org.todo.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.repository.query.Param;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 import org.todo.models.Todo;
+import org.todo.models.User;
 import org.todo.services.TodoService;
+import org.todo.services.UserService;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -17,11 +21,17 @@ public class User_Controller {
 
     @Autowired
     TodoService todoService;
+    @Autowired
+    UserService userService;
+
+    User user_Auth=null;
 
     @GetMapping("/home")
     public ModelAndView get_Home(@Param("Message") String Message){
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        user_Auth = userService.findByEmail(auth.getName());
         ModelAndView modelAndView=new ModelAndView("home_user","todo",new Todo());
-        modelAndView.addObject("todos",todoService.findAll());
+        modelAndView.addObject("todos",user_Auth.getTodos());
 
         if(Message!=null){
             if(Message.contains("Done")){
@@ -37,6 +47,7 @@ public class User_Controller {
     @PostMapping ("/save")
     public void  save(@Validated Todo todo, HttpServletResponse response) throws IOException {
        try {
+           todo.setUser(user_Auth);
            todoService.save(todo);
            response.sendRedirect("/User/home?Message=Done Save");
        }catch (Exception e){
@@ -61,6 +72,7 @@ public class User_Controller {
     @PostMapping ("/update")
     public void  update(@Validated Todo todo, HttpServletResponse response) throws IOException {
         try {
+            todo.setUser(user_Auth);
             todoService.save(todo);
             response.sendRedirect("/User/home?Message=Done update");
         }catch (Exception e){
